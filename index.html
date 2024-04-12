@@ -60,11 +60,7 @@
             endbutton.style.display="none";
       }
 
-      // Configure Client App
-      const ClientApp = window.purecloud.apps.ClientApp
-      const myClientApp = new ClientApp({
-        pcEnvironment: gc_region,
-      })
+  
 
       //Getting and setting the GC details from dynamic URL and session storage
       gc_region ? sessionStorage.setItem('gc_region', gc_region) : (gc_region = sessionStorage.getItem('gc_region'))
@@ -73,7 +69,11 @@
       gc_queueIncludes ? sessionStorage.setItem('gc_queueIncludes', gc_queueIncludes) : (gc_queueIncludes = sessionStorage.getItem('gc_queueIncludes'))
       gc_region ? sessionStorage.setItem('gc_region', gc_region) : (gc_region = sessionStorage.getItem('gc_region'))
 
-
+    // Configure Client App
+    const ClientApp = window.purecloud.apps.ClientApp
+      const myClientApp = new ClientApp({
+        pcEnvironment: gc_region,
+      })
 
       let platformClient = require('platformClient')
       const client = platformClient.ApiClient.instance
