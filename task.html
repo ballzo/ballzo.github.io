@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<!-- Created as an example by https://github.com/mcphee11 Version 2.0 -->
+<html>
+  <head>
+    <meta name="robots" content="noindex" />
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title></title>
+    <meta name="Template" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Genesys CSS https://spark.genesys.com/ -->
+    <link href="https://unpkg.com/genesys-spark-components@latest/dist/genesys-webcomponents/genesys-webcomponents.css" rel="stylesheet" />
+    <script type="module" src="https://unpkg.com/genesys-spark-components@latest/dist/genesys-webcomponents/genesys-webcomponents.esm.js"></script>
+    <!-- Genesys SDK info https://developer.genesys.cloud/ -->
+    <script src="https://sdk-cdn.mypurecloud.com/javascript/latest/purecloud-platform-client-v2.min.js"></script>
+    <script src="https://sdk-cdn.mypurecloud.com/client-apps/2.5.0/purecloud-client-app-sdk.js"></script>
+  </head>
+  <body onload="start()">
+    <div style="width: 100%; display: flex; justify-content: center; padding-top: 100px"><img src="telstra.jpeg" / style="width: 25%;"></div>
+    <br />
+    <br />
+    <div id="dropdowndiv" style="display: flex; justify-content: center">
+      <gux-dropdown id="dropdown" filter-type="starts-with" placeholder="Select a type" style="width: 50dvw; display: block">
+        <gux-listbox id="list" aria-label="types"> </gux-listbox>
+      </gux-dropdown>
+    </div>
+    <div id="text" style="text-align: -webkit-center">
+      <gux-form-field-text-like style="width: 50dvw; display: block">
+        <input id="externalTag" slot="input" type="text" name="t-1" placeholder="Custom Option..." />
+      </gux-form-field-text-like>
+    </div>
+    <div style="width: 100%; height: 30dvh; display: flex; justify-content: center; align-items: center">
+      <gux-button onclick="provider()" accent="primary" style="width: 200px" id="startbutton">Start</gux-button>
+      <gux-button onclick="endConvo()" accent="primary" style="width: 200px" id="endbutton" hidden="true">End</gux-button>
+    </div>
+    <script>
+      'use strict' //Enables strict mode is JavaScript
+      let url = new URL(document.location.href)
+      let gc_region = url.searchParams.get('gc_region')
+      let gc_clientId = url.searchParams.get('gc_clientId')
+      let gc_redirectUrl = url.searchParams.get('gc_redirectUrl')
+      let gc_queueIncludes = url.searchParams.get('gc_queueIncludes')
+
+      let activeTask = sessionStorage.getItem('activeTask');
+      let external =""
+
+ 
+
+
+      if (activeTask != null  ){
+        external.id = activeTask;
+        var endbutton=document.getElementById('endbutton');
+            endbutton.style.display="inline";
+            var startbutton=document.getElementById('startbutton');
+            startbutton.style.display="none";
+
+      }
+      else {
+        var endbutton=document.getElementById('endbutton');
+            endbutton.style.display="none";
+      }
+
+      // Configure Client App
+      const ClientApp = window.purecloud.apps.ClientApp
+      const myClientApp = new ClientApp({
+        pcEnvironment: gc_region,
+      })
+
+      //Getting and setting the GC details from dynamic URL and session storage
+      gc_region ? sessionStorage.setItem('gc_region', gc_region) : (gc_region = sessionStorage.getItem('gc_region'))
+      gc_clientId ? sessionStorage.setItem('gc_clientId', gc_clientId) : (gc_clientId = sessionStorage.getItem('gc_clientId'))
+      gc_redirectUrl ? sessionStorage.setItem('gc_redirectUrl', gc_redirectUrl) : (gc_redirectUrl = sessionStorage.getItem('gc_redirectUrl'))
+      gc_queueIncludes ? sessionStorage.setItem('gc_queueIncludes', gc_queueIncludes) : (gc_queueIncludes = sessionStorage.getItem('gc_queueIncludes'))
+      gc_region ? sessionStorage.setItem('gc_region', gc_region) : (gc_region = sessionStorage.getItem('gc_region'))
+
+
+
+      let platformClient = require('platformClient')
+      const client = platformClient.ApiClient.instance
+      const uapi = new platformClient.UsersApi()
+      const rapi = new platformClient.RoutingApi()
+      const capi = new platformClient.ConversationsApi()
+      
+
+      async function start() {
+        try {
+          client.setEnvironment(gc_region)
+          client.setPersistSettings(true, '_mm_')
+
+          console.log('%cLogging in to Genesys Cloud', 'color: green')
+          await client.loginImplicitGrant(gc_clientId, gc_redirectUrl, {})
+
+          //GET Current UserId
+          let user = await uapi.getUsersMe({})
+          console.log(user)
+
+          //Enter in starting code.
+          gc_queueIncludes ? null : myClientApp.alerting.showToastPopup('Warning', 'Please set the Queue')
+          getQueues()
+        } catch (err) {
+          console.log('Error: ', err)
+        }
+      } //End of start() function
+
+      async function getQueues() {
+        const list = document.getElementById('list')
+        let queues = await rapi.getRoutingQueues({
+          pageSize: 500,
+        })
+        console.log(queues)
+        for (const queue of queues.entities) {
+          if (queue.name.includes(gc_queueIncludes)) {
+            let object = `<gux-option value="${queue.id}">${queue.name}</gux-option>`
+            list.innerHTML = list.innerHTML + object
+          }
+        }
+      }
+
+
+      async function provider() {
+        let type = document.getElementById('dropdown').value
+        let tag = document.getElementById('externalTag').value
+        if (!type) {
+          myClientApp.alerting.showToastPopup('Telstra Mode', 'Select a Type first')
+          console.warn('Select a Type first')
+          return
+        }
+        else {
+            var startbutton=document.getElementById('startbutton');
+            startbutton.style.display="none";
+            var endbutton=document.getElementById('endbutton');
+            endbutton.style.display="inline";
+
+            }
+        
+
+        external = await capi.postConversationsEmails({
+          queueId: type,
+          direction: 'OUTBOUND',
+          toAddress: 'fake@fake.com',
+          provider: 'Telstra',
+          subject: tag,
+          toName: tag
+          
+        })
+        myClientApp.alerting.showToastPopup('Task Mode', 'Mode set')
+        console.log(external)
+        sessionStorage.setItem('activeTask', external.id)
+        if (tag) {
+          console.log(`externalTag: ${tag}`)
+          let update = await capi.putConversationTags(external.id, {
+            externalTag: tag,
+          })
+        }
+      }
+
+
+      async function endConvo(){
+
+        if (external.id == null ){
+         myClientApp.alerting.showToastPopup('Warning', 'No Interaction found')
+        }
+        else{
+            sessionStorage.setItem('activeTask', '')
+            myClientApp.alerting.showToastPopup('Task Mode Ended', 'Mode removed')
+            var startbutton=document.getElementById('startbutton');
+            startbutton.style.display="inline";
+            var endbutton=document.getElementById('endbutton');
+            endbutton.style.display="none";
+        capi.postConversationDisconnect(external.id)
+            .then((data) => {
+                console.log(`postConversationDisconnect success! data: ${JSON.stringify(data, null, 2)}`);
+            })
+            .catch((err) => {
+                console.log('There was a failure calling postConversationDisconnect');
+                console.error(err);
+            });
+       
+      }
+    }
+
+    </script>
+  </body>
+</html>
