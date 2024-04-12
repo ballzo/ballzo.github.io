@@ -107,7 +107,7 @@
         let queues = await rapi.getRoutingQueues({
           pageSize: 500,
         })
-        console.log(queues)
+        console.log("QUEUE: " + queues)
         for (const queue of queues.entities) {
           if (queue.name.includes(gc_queueIncludes)) {
             let object = `<gux-option value="${queue.id}">${queue.name}</gux-option>`
